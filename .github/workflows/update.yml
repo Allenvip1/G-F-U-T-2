@@ -1,0 +1,53 @@
+name: update-equity-futures-oi
+
+on:
+  schedule:
+    # 分钟故意选冷门值（:23/:53），避开 GitHub 整刻钟的排队高峰；CME 初步版约北京 14:00 前后出，最终版次日凌晨覆盖
+    - cron: "23 6 * * 1-5"    # 北京时间 14:23，抓初步版
+    - cron: "53 6 * * 1-5"    # 北京时间 14:53，兜底再抓一次
+    - cron: "23 16 * * 1-5"   # 北京时间次日 00:23，抓最终版并覆盖
+  workflow_dispatch:
+
+# 同一时间只跑一个：GitHub 定时任务常被攒到一起同时触发，排队执行可避免两个任务同时推送互相撞车
+concurrency:
+  group: update-equity-futures-oi
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r scripts/requirements.txt
+      - name: 抓取 CME 日报第 11 页（股指期货各合约持仓量）
+        id: cme
+        continue-on-error: true      # 失败也继续去抓价格/提交，最后再把任务标红
+        run: python scripts/fut.py
+      - name: 抓取 ES、NQ 日线（Yahoo，失败只告警）
+        continue-on-error: true
+        run: python scripts/fetch_price.py
+      - name: 抓取波动率指数 VIX / VXN（CBOE，失败只告警）
+        continue-on-error: true
+        run: python scripts/fetch_vol.py
+      - name: 生成页面数据
+        run: python scripts/build.py
+      - name: Commit
+        run: |
+          git config user.name "eq-bot"
+          git config user.email "eq-bot@users.noreply.github.com"
+          git add data/ index.html
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "update equity futures OI $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi
+      - name: CME 抓取失败时把任务标红
+        if: steps.cme.outcome == 'failure'
+        run: exit 1
