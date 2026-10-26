@@ -50,7 +50,7 @@
     <span style="width:1px;height:20px;background:var(--line);margin:0 6px"></span>
     <label style="font-size:13px"><input type="checkbox" id="pivOn" checked> 价格顶底</label>
     <label style="font-size:13px"><input type="checkbox" id="divOn" checked> 量价背离箭头（MFI / CMF）</label><span id="divN" style="font-size:12px;color:var(--dim)"></span>
-    <label style="font-size:13px">MFI 周期 <input type="number" id="mfiLen" value="14" min="2" max="60" step="1" style="width:56px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px"></label>
+    <label style="font-size:13px">MFI 周期 <input type="number" id="mfiLen" value="8" min="2" max="60" step="1" style="width:56px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px"></label>
     <label style="font-size:13px">反转 ≥ <input type="number" id="pivPct" value="8" min="2" max="30" step="0.5" style="width:60px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px"> %</label>
   </div>
   <div class="grid" id="top"></div>
@@ -157,7 +157,7 @@ const ALL = [];
 let HOVER = null, ACTIVE = null, syncC = false, CAL = [];
 
 function mk(el, h) { return LightweightCharts.createChart(el, { ...css, width: el.clientWidth, height: h }); }
-const mfiLen = () => Math.max(2, Math.min(60, Math.round(+$("mfiLen").value) || 14));
+const mfiLen = () => Math.max(2, Math.min(60, Math.round(+$("mfiLen").value) || 8));
 // MFI(n)：典型价 =（高+低+收）/3 × 成交量 = 资金流；n 个交易日内价格上行日的资金流占比换算成 0~100（只在有行情又有成交量的日子上算）
 function calcMfi(m, n) {
   const out = new Map(), flows = []; let prevTp = null;
@@ -201,7 +201,7 @@ function build() {
     col.innerHTML = `
       <div class="card"><div class="ttl"><i style="background:#ff9800"></i>② ${m.volName}（CBOE，用 ${m.etf} 指数期权算出的未来 30 天年化隐含波动率，%）</div><div class="exp" id="x_${m.key}"></div><div id="g_${m.key}"></div></div>
       <div class="card"><div class="ttl"><i style="background:${m.color}"></i>③ ${m.fut} 总持仓量（手，所有合约月份合计）</div><div id="o_${m.key}"></div></div>
-      <div class="card"><div class="ttl"><i style="background:#ba68c8"></i>④ MFI（<span class="mfiN">14</span>）资金流量指标：0~100，&gt;80 超买、&lt;20 超卖；价格新高而 MFI 不创新高 = 顶背离</div><div id="b_${m.key}"></div></div>
+      <div class="card"><div class="ttl"><i style="background:#ba68c8"></i>④ MFI（<span class="mfiN">8</span>）资金流量指标：0~100，&gt;80 超买、&lt;20 超卖；价格新高而 MFI 不创新高 = 顶背离</div><div id="b_${m.key}"></div></div>
       <div class="card"><div class="ttl"><i style="background:#f06292"></i>⑤ CMF（20）蔡金资金流：−1~+1，&gt;0 买压占优、&lt;0 卖压占优；价格新高而 CMF 不创新高 = 顶背离</div><div id="f_${m.key}"></div></div>
       <div class="card"><div class="ttl">⑥ 每日持仓量变化（手）· 红增仓 绿减仓</div><div id="c_${m.key}"></div></div>
       <div class="card"><div class="ttl">⑦ 总成交量（手）· 红柱=当日收盘上涨 绿柱=下跌</div><div id="v_${m.key}"></div></div>`;
